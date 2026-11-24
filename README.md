@@ -56,7 +56,11 @@ python desktop_app.py
 
 ### Windows .exe
 
-Build a folder app (not a single-file zip of Python):
+**Release download:** use the latest GitHub Release asset  
+`PersonalFinanceTracker-Windows-x64.zip`. Unzip the folder, put a `.env` next to the
+`.exe` with your `GEMINI_API_KEY`, then run `PersonalFinanceTracker.exe`.
+
+Build locally:
 
 ```bash
 build_exe.bat
