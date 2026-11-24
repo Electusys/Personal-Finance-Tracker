@@ -147,21 +147,35 @@ def ensure_sidecar_files() -> None:
         example_dst.write_text(example_src.read_text(encoding="utf-8"), encoding="utf-8")
 
 
+def keep_alive_while_server_up() -> None:
+    while port_is_open(HOST, PORT):
+        time.sleep(1)
+
+
+def open_in_browser(reason: str) -> None:
+    log(f"opening browser fallback: {reason}")
+    webbrowser.open(URL)
+    show_message(
+        "Personal Finance Tracker",
+        "Masaüstü penceresi açılamadı; tarayıcıda açıldı.\n"
+        f"Detay: {reason}\n\nLog: {log_path()}\nURL: {URL}",
+    )
+    keep_alive_while_server_up()
+
+
 def open_ui() -> None:
-    """Prefer native window; fall back to default browser."""
+    """Prefer Edge WebView2 window; fall back to default browser.
+
+    Frozen builds must not use the WinForms/pythonnet backend — PyInstaller
+    cannot reliably resolve Python.Runtime.dll on end-user machines.
+    """
+    # Force Edge Chromium before importing platform backends.
+    os.environ.setdefault("PYWEBVIEW_GUI", "edgechromium")
+
     try:
         import webview
     except ImportError as exc:
-        log(f"webview missing: {exc}")
-        webbrowser.open(URL)
-        show_message(
-            "Personal Finance Tracker",
-            "Masaüstü penceresi açılamadı; tarayıcıda açıldı.\n"
-            f"{URL}",
-        )
-        # Keep process alive while user uses the browser-served app.
-        while port_is_open(HOST, PORT):
-            time.sleep(1)
+        open_in_browser(f"webview missing: {exc}")
         return
 
     try:
@@ -172,20 +186,14 @@ def open_ui() -> None:
             height=840,
             min_size=(900, 600),
         )
-        log("webview window created, starting UI loop")
-        webview.start()
+        log("webview window created, starting UI loop (edgechromium)")
+        # Explicit GUI avoids winforms -> pythonnet -> Python.Runtime.dll crash.
+        webview.start(gui="edgechromium")
         log("webview loop ended")
         _ = window
     except Exception as exc:
         log(f"webview failed: {exc}\n{traceback.format_exc()}")
-        webbrowser.open(URL)
-        show_message(
-            "Personal Finance Tracker",
-            "Masaüstü penceresi açılamadı; tarayıcıda açıldı.\n"
-            f"Detay: {exc}\n\nLog: {log_path()}",
-        )
-        while port_is_open(HOST, PORT):
-            time.sleep(1)
+        open_in_browser(str(exc))
 
 
 def main() -> None:
